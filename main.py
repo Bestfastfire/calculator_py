@@ -1,25 +1,29 @@
 import re
 
-log_on = True
+log_on = False
 
 priorityLevel = [
     r'\(.+\)',
     r'\[.+\]',
     r'\{.+\}',
     r'![\d.]+',
-    r'[\d.]+\^[\d.]+',
-    r'[\d.]+\*[-]?[\d.]+',
-    r'[\d.]+\/[-]?[\d.]+',
-    r'[\d.]+\+[\d.]+',
-    r'[\d.]+-[\d.]+'
+    r'[-]?[\d.]+\^[-]?[\d.]+',
+    r'[-]?[\d.]+\*[-]?[\d.]+',
+    r'[-]?[\d.]+\/[-]?[\d.]+',
+    r'[-]?[\d.]+\+[\d.]+',
+    r'[-]?[\d.]+-[\d.]+'
 ]
 
 verifyReg = [
     {'reg': r'[^\d\{\}\(\)\[\]\+-\/*!\^]+'},
     {
-        'reg': r'(([+\-])[+-\/*!\^]+)',
+        'reg': r'(([+\-])[+-\/*\^]+)',
         'rep': r'\2'
     },
+    {
+        'reg': r'((!)[!]+)',
+        'rep': r'\2'
+    }
 ]
 
 
@@ -49,12 +53,12 @@ def _check_high_priority(express):
     return True if count == 0 else False
 
 
-def _calc(e, v1, v2, symbol):
+def _calc(e, v1, v2=0.0, symbol='+'):
     if '!' in e:
         count = 1
         r = 1
 
-        while count <= v2:
+        while count <= v1:
             r *= count
             count += 1
 
@@ -85,13 +89,22 @@ def _calculator(express):
     complement = ''
 
     if '*-' in express or '/-' in express or express[0] == '-':
-        complement = '-'
+        complement = '\-'
 
-    e = re.split(r'([^\w.\\' + complement + '])', express)
-    my_log('calculator -> ' + express + ' | ' + str(e))
+    if '!' in express:
+        complement += '!'
 
-    if '!' in e:
-        return _calc(e, 0, float(e[2]), '')
+    e = re.split(r'([^\w.' + complement + '])', express)
+    print('calculator -> ' + express + ' | ' + str(e))
+
+    for i in range(len(e)):
+        item = e[i]
+
+        if '!' in item:
+            e[i] = _calc('!', float(item[1]))
+
+    if len(e) == 1:
+        return e[0]
 
     v1 = float(e[0])
     v2 = float(e[2])
@@ -155,7 +168,7 @@ def _remove_special(old, new):
 
 def _broke(express, priority, p_list):
     cut = re.findall(priority, express)
-    my_log('receiver ->', cut)
+    my_log('receiver -> ' + str(cut) + ' | ' + priority)
 
     # case found this express
     if len(cut) > 0:
@@ -173,6 +186,7 @@ def _broke(express, priority, p_list):
                     express = express.replace(new, _broke(new, pr, p_list))
 
             else:
+                my_log('calling calculator -> ' + new)
                 express = express.replace(c, str(_calculator(new)))
                 my_log('ex -> ' + express)
 
@@ -209,7 +223,8 @@ while somethingWrong:
             continue
 
     resolution = []
-    print('Iniciando cálculos de ' + expression + '...')
+    first = expression
+
     while _has_more(expression, priorityLevel, 0):
         for p in priorityLevel:
             expression = _broke(expression, p, priorityLevel)
@@ -218,4 +233,4 @@ while somethingWrong:
             if expression not in resolution:
                 resolution.append(str(expression))
 
-    print('Fazendo operações:\n' + '\n'.join(resolution) + '\nO resultado é: ' + expression)
+    print('Fazendo operações:\n' + first + '\n' + '\n'.join(resolution) + '\nO resultado é: ' + expression)
