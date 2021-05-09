@@ -88,14 +88,14 @@ def _calc(e, v1, v2=0.0, symbol='+'):
 def _calculator(express):
     complement = ''
 
-    if '*-' in express or '/-' in express or express[0] == '-':
+    if '*-' in express or '/-' in express or '^-' in express or express[0] == '-':
         complement = '\-'
 
     if '!' in express:
         complement += '!'
 
     e = re.split(r'([^\w.' + complement + '])', express)
-    print('calculator -> ' + express + ' | ' + str(e))
+    my_log('calculator -> ' + express + ' | ' + str(e))
 
     for i in range(len(e)):
         item = e[i]
