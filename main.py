@@ -1,6 +1,6 @@
 import re
 
-log_on = False
+log_on = True
 
 priorityLevel = [
     r'\(.+\)',
@@ -8,8 +8,8 @@ priorityLevel = [
     r'\{.+\}',
     r'![\d.]+',
     r'[\d.]+\^[\d.]+',
-    r'[\d.]+\*[\d.]+',
-    r'[\d.]+\/[\d.]+',
+    r'[\d.]+\*[-]?[\d.]+',
+    r'[\d.]+\/[-]?[\d.]+',
     r'[\d.]+\+[\d.]+',
     r'[\d.]+-[\d.]+'
 ]
@@ -17,7 +17,7 @@ priorityLevel = [
 verifyReg = [
     {'reg': r'[^\d\{\}\(\)\[\]\+-\/*!\^]+'},
     {
-        'reg': r'(([+-\/*!\^])[+-\/*!\^]+)',
+        'reg': r'(([+\-])[+-\/*!\^]+)',
         'rep': r'\2'
     },
 ]
@@ -49,38 +49,58 @@ def _check_high_priority(express):
     return True if count == 0 else False
 
 
-def _calculator(express):
-    e = re.split(r'([^\w.])', express)
-    my_log('calculator -> ' + express + ' | ' + str(e))
-    result = 0
-
+def _calc(e, v1, v2, symbol):
     if '!' in e:
         count = 1
         r = 1
 
-        while count <= float(e[2]):
+        while count <= v2:
             r *= count
             count += 1
 
-        result = r
+        return r
 
     elif len(e) == 1:
-        result = float(e[0])
+        return v1
 
-    elif e[1] == '^':
-        result = float(e[0]) ** float(e[2])
+    elif symbol == '^':
+        return v1 ** v2
 
-    elif e[1] == '+':
-        result = float(e[0]) + float(e[2])
+    elif symbol == '+':
+        return v1 + v2
 
-    elif e[1] == '-':
-        result = float(e[0]) - float(e[2])
+    elif symbol == '-':
+        return v1 - v2
 
-    elif e[1] == '*':
-        result = float(e[0]) * float(e[2])
+    elif symbol == '*':
+        return v1 * v2
 
-    elif e[1] == '/':
-        result = float(float(e[0]) / float(e[2]))
+    elif symbol == '/':
+        return v1 / v2
+
+    return 0
+
+
+def _calculator(express):
+    complement = ''
+
+    if '*-' in express or '/-' in express or express[0] == '-':
+        complement = '-'
+
+    e = re.split(r'([^\w.\\' + complement + '])', express)
+    my_log('calculator -> ' + express + ' | ' + str(e))
+
+    if '!' in e:
+        return _calc(e, 0, float(e[2]), '')
+
+    v1 = float(e[0])
+    v2 = float(e[2])
+
+    v3 = float(e[4]) if len(e) > 3 else 0
+    op2 = e[3] if len(e) > 3 else '+'
+
+    result = _calc(e, v1, v2, e[1])
+    result = _calc(e, result, v3, op2)
 
     my_log('result -> ' + str(result))
     return result
@@ -124,7 +144,7 @@ def _remove_special(old, new):
                 else:
                     ex[i] = contrary[item[-1]] + item
 
-                s = s+1
+                s = s + 1
                 my_log('try with -> ' + ex[i])
                 while _has_more(ex[i], priorityLevel, 0):
                     for _p in priorityLevel:
