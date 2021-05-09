@@ -116,6 +116,10 @@ def _calculator(express):
     result = _calc(e, result, v3, op2)
 
     my_log('result -> ' + str(result))
+
+    if result == 0:
+        return 0
+
     return result
 
 
