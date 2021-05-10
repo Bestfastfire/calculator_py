@@ -1,14 +1,23 @@
 import re
 
-exp = "2+[]((2 * 2) + 2) + ((2 /2) * 3) + (2)"
+exp = "2+[(-2 * -2 + 2 - 3 + 3a) + [2]] + ((!5 /!2) * 3) + (!2)"
 
 verify = [
+    {'reg': r'[^\d\{\}\(\)\[\]\+-\/*!\^]+'},
     {'reg': r'\(\)|\[\]|\{\}'},
-    {'reg': r'[\s]'}
+    {
+        'reg': r'(([+\-])[+-\/*\^]+)',
+        'rep': r'\2'
+    },
+    {
+        'reg': r'((!)[!]+)',
+        'rep': r'\2'
+    }
 ]
 
 out = {
     'any_priority': r'\(|\[|\{|\)|\}|\]',
+    'operations': r'([^\d.!]+)'
 }
 
 main_contrary = [')', ']', '}']
@@ -20,8 +29,16 @@ contrary = {
     '{': '}'
 }
 
+log_on = False
 
-def _calc(v1, v2=0.0, symbol='+'):
+
+def my_log(self, *args):
+    if log_on:
+        print(self, args)
+
+
+def _calc(symbol, v1, v2=0.0):
+    my_log('calculating -> ' + str(v1) + ' ' + symbol + ' ' + str(v2))
     if symbol == '!':
         count = 1
         r = 1
@@ -51,8 +68,59 @@ def _calc(v1, v2=0.0, symbol='+'):
 
 
 def _resolve(expression):
+    expression = re.split(out['operations'], expression)
+    expression = list(filter(None, expression))
+    print('init -> ' + str(expression))
 
+    # resolve all !
+    for i in range(len(expression)):
+        op = expression[i]
+
+        if '!' in op:
+            expression[i] = _calc('!', float(op[1:]))
+
+    # resolve all ^, * and /
+    expression = _resolve_last_priority(expression, '^')
+    expression = _resolve_last_priority(expression, '*')
+    expression = _resolve_last_priority(expression, '/')
+
+    # resolve all + and -
+    print('done -> ' + str(expression))
     return ''
+
+
+def _resolve_last_priority(expression, symbol):
+    if symbol + '-' in expression or symbol in expression:
+        for i in range(len(expression)):
+            op = str(expression[i])
+
+            if op == '':
+                continue
+
+            if symbol in op:
+                # ex: ['-', '2', 'symbol-', '2']
+                v1 = float(expression[i - 1])
+                v2 = float(expression[i + 1])
+
+                # if index before contain -
+                if i > 1 and '-' in expression[i - 2]:
+                    # remove - of last
+                    expression[i - 2] = expression[i - 2][0:-1]
+                    v1 = v1 * -1
+
+                if '-' in op:
+                    v2 = v2 * -1
+
+                # set last index with result
+                expression[i - 1] = _calc(symbol, v1, v2)
+
+                # set next and actual with empty to remove after
+                expression[i + 1] = ''
+                expression[i] = ''
+
+    # clean empty indexes ['']
+    expression = list(filter(None, expression))
+    return expression
 
 
 def _list_priority(expression):
@@ -98,6 +166,9 @@ def _list_priority(expression):
                             if _res['catch']:
                                 catch = True
                                 break
+
+                            else:
+                                to_add['inside'] = _res
 
                         else:
                             to_add['result'] = _resolve(sub)
