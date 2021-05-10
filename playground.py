@@ -167,33 +167,45 @@ def _resolve(expression):
 
 
 def _resolve_last_priority(expression, symbol):
-    if symbol + '-' in expression or symbol in expression:
-        for i in range(len(expression)):
-            op = str(expression[i])
+    expression = clean_list(expression)
+    c = True
 
-            if op == '':
-                continue
+    while c:
+        if symbol + '-' in expression or symbol in expression:
+            for i in range(len(expression)):
+                op = str(expression[i])
 
-            if symbol in op:
-                # ex: ['-', '2', 'symbol-', '2']
-                v1 = float(expression[i - 1])
-                v2 = float(expression[i + 1])
+                if op == '':
+                    continue
 
-                # if index before contain -
-                if i > 1 and '-' in expression[i - 2]:
-                    # remove - of last
-                    expression[i - 2] = expression[i - 2][0:-1]
-                    v1 = v1 * -1
+                if symbol in op:
+                    # print('ex -' + op + ' | ' + str(i) + ' | ' + str(expression))
+                    # ex: ['-', '2', 'symbol-', '2']
+                    v1 = float(expression[i - 1])
+                    v2 = float(expression[i + 1])
 
-                if '-' in op:
-                    v2 = v2 * -1
+                    # if index before contain -
+                    if i > 1 and '-' in expression[i - 2]:
+                        # remove - of last
+                        expression[i - 2] = expression[i - 2][0:-1]
+                        v1 = v1 * -1
 
-                # set last index with result
-                expression[i - 1] = _calc(symbol, v1, v2)
+                    if '-' in op:
+                        v2 = v2 * -1
 
-                # set next and actual with empty to remove after
-                expression[i + 1] = ''
-                expression[i] = ''
+                    # set last index with result
+                    expression[i - 1] = _calc(symbol, v1, v2)
+
+                    # set next and current with empty to remove it after
+                    expression[i + 1] = ''
+                    expression[i] = ''
+
+                    # [4, '', '', '*', 4]
+                    expression = clean_list(expression)
+                    break
+
+        else:
+            c = False
 
     # clean empties indexes ['']
     return clean_list(expression)
