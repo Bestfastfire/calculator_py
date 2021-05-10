@@ -3,11 +3,11 @@ import re
 log_on = False
 
 priorityLevel = [
-    r'\(.+\)',
-    r'\[.+\]',
-    r'\{.+\}',
     r'![\d.]+',
     r'[-]?[\d.]+\^[-]?[\d.]+',
+    r'\((?:[^()]|(?R))+\)'
+    r'\[.+?\]',
+    r'\{.+?\}',
     r'[-]?[\d.]+\*[-]?[\d.]+',
     r'[-]?[\d.]+\/[-]?[\d.]+',
     r'[-]?[\d.]+\+[\d.]+',
@@ -36,9 +36,9 @@ def _check_high_priority(express):
     priorities = [['(', ')'], ['{', '}'], ['[', ']']]
     count = 0
 
-    for p in priorities:
-        bef = p[0]
-        aft = p[1]
+    for _p in priorities:
+        bef = _p[0]
+        aft = _p[1]
         local = 0
 
         for letter in express:
@@ -86,6 +86,12 @@ def _calc(e, v1, v2=0.0, symbol='+'):
 
 
 def _calculator(express):
+    #  ['2', '*', '', '(', '36.0', ')', '']
+    express = re.sub(r'([\[\{\(])([+\-!]?[\d.]+)([\]\}\)])', r'\2', express)
+
+    # ['2', '*', '', '+', '6.0']
+    express = re.sub(r'([*\-\/+])\+', r'\1', express)
+
     complement = ''
 
     if '*-' in express or '/-' in express or '^-' in express or express[0] == '-':
@@ -191,7 +197,17 @@ def _broke(express, priority, p_list):
 
             else:
                 my_log('calling calculator -> ' + new)
-                express = express.replace(c, str(_calculator(new)))
+                test = express.split(c)
+                rpl = str(_calculator(new))
+                rg = r'[+\-*\/]'
+
+                # last 3 -3/3
+                if len(re.findall(rg, test[-1])) == 0 and len(re.findall(rg, rpl[0])) == 0:
+                    express = express.replace(c, '+' + str(_calculator(new)))
+
+                else:
+                    express = express.replace(c, str(_calculator(new)))
+
                 my_log('ex -> ' + express)
 
     # Fix error when (x) / [x] / {x}
@@ -226,8 +242,7 @@ while somethingWrong:
             somethingWrong = True
             continue
 
-    resolution = []
-    first = expression
+    resolution = [str(expression)]
 
     while _has_more(expression, priorityLevel, 0):
         for p in priorityLevel:
@@ -237,4 +252,4 @@ while somethingWrong:
             if expression not in resolution:
                 resolution.append(str(expression))
 
-    print('Fazendo operações:\n' + first + '\n' + '\n'.join(resolution) + '\nO resultado é: ' + expression)
+    print('Fazendo operações:\n' + '\n'.join(resolution) + '\nO resultado é: ' + expression)
