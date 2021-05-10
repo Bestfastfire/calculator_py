@@ -24,7 +24,7 @@ verify = [
 
 out = {
     'any_priority': r'\(|\[|\{|\)|\}|\]',
-    'any_operator': r'.+[+\-*/].+',
+    'any_operator': r'.+[+\-*/^!].+',
     'operations': r'([^\d.!]+)'
 }
 
