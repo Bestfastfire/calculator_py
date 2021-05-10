@@ -1,13 +1,15 @@
-import json
 import re
-
-exp = "2+(-2 * -2 + 2 - 3 + 3) + [2] + ((!5 /!2) * 3) + (!2)"
 
 verify = [
     {'reg': r'[^\d\{\}\(\)\[\]\+-\/*!\^]+'},
     {'reg': r'[\s]+'},
+    {'reg': r'^\+'},
     {
-        'reg': r'(\()\+',
+        'reg': r'([\(\[\{])[\+*\/^]',
+        'rep': r'\1'
+    },
+    {
+        'reg': r'[\+*\/^]([\)\]\}])',
         'rep': r'\1'
     },
     {
@@ -22,7 +24,7 @@ verify = [
 
 out = {
     'any_priority': r'\(|\[|\{|\)|\}|\]',
-    'any_operator': r'[+\-*/]',
+    'any_operator': r'.+[+\-*/].+',
     'operations': r'([^\d.!]+)'
 }
 
@@ -51,33 +53,40 @@ def _verify_all(expression):
 
 
 def _calc(symbol, v1, v2=0.0):
+    symbol = re.sub(r'(.).+', r'\1', symbol)
     my_log('calculating -> ' + str(v1) + ' ' + symbol + ' ' + str(v2))
+    result = v1
+
+    v1 = float(v1)
+    v2 = float(v2)
+
     if symbol == '!':
         count = 1
-        r = 1
+        _r = 1
 
         while count <= v1:
-            r *= count
+            _r *= count
             count += 1
 
-        return r
+        result = _r
 
     elif symbol == '^':
-        return v1 ** v2
+        result = v1 ** v2
 
     elif symbol == '+':
-        return v1 + v2
+        result = v1 + v2
 
     elif symbol == '-':
-        return v1 - v2
+        result = v1 - v2
 
     elif symbol == '*':
-        return v1 * v2
+        result = v1 * v2
 
     elif symbol == '/':
-        return v1 / v2
+        result = v1 / v2
 
-    return v1
+    my_log('result -> ' + str(result))
+    return result
 
 
 def clean_list(m_list):
@@ -114,16 +123,41 @@ def _resolve(expression):
         for i in range(size):
             op = expression[i]
 
-            if op == '' or i == size-1:
+            if op == '' or i == size - 1:
                 continue
 
-            v2 = float(expression[i+2])
-            symbol = expression[i+1]
+            # ['+', '9']
+            if size == 2:
+                try:
+                    float(expression[i])
+
+                except ValueError:
+                    expression[i] = float(expression[i+1])
+                    expression[i+1] = ''
+                    continue
+
+            # [23.0, -3.0, '+']
+            # ['23.0', '+', '3.0']
+            my_log('ex -> ' + str(expression))
+            vx = expression[i + 1]
+            is_num = True
+
+            try:
+                float(vx)
+
+            except ValueError:
+                is_num = False
+
+            v2 = vx if is_num else float(expression[i + 2])
+            symbol = '+' if is_num else expression[i + 1]
             v1 = float(op)
 
             expression[i] = _calc(symbol, v1, v2)
-            expression[i+2] = ''
-            expression[i+1] = ''
+            expression[i + 1] = ''
+
+            if not is_num:
+                expression[i + 2] = ''
+
             break
 
         expression = clean_list(expression)
@@ -195,7 +229,7 @@ def _list_priority(expression):
                 if letter == contrary[search]:
                     if jump == 0:
                         in_match = False
-                        match = expression[start:(i+1)]
+                        match = expression[start:(i + 1)]
 
                         to_add = {
                             'match': match,
@@ -246,33 +280,47 @@ def _expression_replace(expression, m_list):
     return expression
 
 
-exp = _verify_all(exp)
-res = _list_priority(exp)
+want_continue = True
+while want_continue:
+    # exp = "2+(-2 * -2 + 2 - 3 + 3) + [2] + ((!5 /!2) * 3) + (!2)"
+    exp = input("Digite uma expressão matemática:\n")
 
-if res['catch']:
-    print('Expressão inválida -> ' + str(res))
+    exp = _verify_all(exp)
+    res = _list_priority(exp)
 
-else:
-    print('Iniciando cálculos:\n' + exp)
-    need_continue = True
+    if res['catch']:
+        print('Expressão inválida -> ' + str(res))
+        continue
 
-    while need_continue:
-        exp = _expression_replace(exp, res['list'])
-        print(exp)
+    else:
+        print('Iniciando cálculos:\n' + exp)
+        need_continue = True
 
-        if len(re.findall(out['any_priority'], exp)) > 0:
-            res = _list_priority(exp)
-            continue
+        # 1 + 2 / 4
+        # 1 + +0.5
+        # +?
 
-        elif len(re.findall(out['any_operator'], exp)) > 0:
-            exp = _resolve(exp)
+        while need_continue:
+            exp = _expression_replace(exp, res['list'])
+            exp = _verify_all(exp)
 
-        need_continue = False
+            if len(re.findall(out['any_priority'], exp)) > 0:
+                res = _list_priority(exp)
+                exp = _expression_replace(exp, res['list'])
+                print(exp)
 
-    print(exp)
+                continue
 
+            elif len(re.findall(out['any_operator'], exp)) > 0:
+                exp = _resolve(exp)
+                exp = _verify_all(exp)
+                print(exp)
+                continue
 
+            need_continue = False
 
+        print('O resultado é: ' + str(exp))
+        r = input('Digite "c" para uma nova expressão ou qualquer outro caractere para finalizar:\n')
 
-
-
+        if r != 'c':
+            want_continue = False
