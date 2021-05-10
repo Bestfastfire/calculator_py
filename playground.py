@@ -1,10 +1,15 @@
+import json
 import re
 
-exp = "2+[(-2 * -2 + 2 - 3 + 3a) + [2]] + ((!5 /!2) * 3) + (!2)"
+exp = "2+(-2 * -2 + 2 - 3 + 3) + [2] + ((!5 /!2) * 3) + (!2)"
 
 verify = [
     {'reg': r'[^\d\{\}\(\)\[\]\+-\/*!\^]+'},
-    {'reg': r'\(\)|\[\]|\{\}'},
+    {'reg': r'[\s]+'},
+    {
+        'reg': r'(\()\+',
+        'rep': r'\1'
+    },
     {
         'reg': r'(([+\-])[+-\/*\^]+)',
         'rep': r'\2'
@@ -17,6 +22,7 @@ verify = [
 
 out = {
     'any_priority': r'\(|\[|\{|\)|\}|\]',
+    'any_operator': r'[+\-*/]',
     'operations': r'([^\d.!]+)'
 }
 
@@ -35,6 +41,13 @@ log_on = False
 def my_log(self, *args):
     if log_on:
         print(self, args)
+
+
+def _verify_all(expression):
+    for reg in verify:
+        expression = re.sub(reg['reg'], reg['rep'] if 'rep' in reg else '', expression)
+
+    return expression
 
 
 def _calc(symbol, v1, v2=0.0):
@@ -67,10 +80,14 @@ def _calc(symbol, v1, v2=0.0):
     return v1
 
 
+def clean_list(m_list):
+    return list(filter(None, m_list))
+
+
 def _resolve(expression):
     expression = re.split(out['operations'], expression)
-    expression = list(filter(None, expression))
-    print('init -> ' + str(expression))
+    expression = clean_list(expression)
+    # print('init -> ' + str(expression))
 
     # resolve all !
     for i in range(len(expression)):
@@ -85,8 +102,34 @@ def _resolve(expression):
     expression = _resolve_last_priority(expression, '/')
 
     # resolve all + and -
-    print('done -> ' + str(expression))
-    return ''
+
+    # ['-', '2', '?', '2']
+    if expression[0] == '-':
+        expression[1] = str(-float(expression[1]))
+        expression[0] = ''
+
+    while len(expression) > 1:
+        size = len(expression)
+
+        for i in range(size):
+            op = expression[i]
+
+            if op == '' or i == size-1:
+                continue
+
+            v2 = float(expression[i+2])
+            symbol = expression[i+1]
+            v1 = float(op)
+
+            expression[i] = _calc(symbol, v1, v2)
+            expression[i+2] = ''
+            expression[i+1] = ''
+            break
+
+        expression = clean_list(expression)
+
+    v = float(expression[0])
+    return '+' + str(v) if v >= 0 else str(v)
 
 
 def _resolve_last_priority(expression, symbol):
@@ -118,9 +161,8 @@ def _resolve_last_priority(expression, symbol):
                 expression[i + 1] = ''
                 expression[i] = ''
 
-    # clean empty indexes ['']
-    expression = list(filter(None, expression))
-    return expression
+    # clean empties indexes ['']
+    return clean_list(expression)
 
 
 def _list_priority(expression):
@@ -182,22 +224,55 @@ def _list_priority(expression):
         catch = True
 
     return {
-        'priority_list': priority_list,
+        'list': priority_list,
         'catch': catch
     }
 
 
-for reg in verify:
-    exp = re.sub(reg['reg'], reg['rep'] if 'rep' in reg else '', exp)
+def _expression_replace(expression, m_list):
+    for i in range(len(m_list)):
+        item = m_list[i]
+        match = item['match']
+
+        if 'result' in item:
+            my_log('match -> ' + match + ' replace -> ' + item['result'])
+            expression = expression.replace(match, item['result'])
+            expression = _verify_all(expression)
+
+        elif 'inside' in item:
+            expression = expression.replace(match, _expression_replace(match, item['inside']['list']))
+            expression = _verify_all(expression)
+
+    return expression
 
 
+exp = _verify_all(exp)
 res = _list_priority(exp)
 
 if res['catch']:
     print('Expressão inválida -> ' + str(res))
 
 else:
-    print(str(res))
+    print('Iniciando cálculos:\n' + exp)
+    need_continue = True
+
+    while need_continue:
+        exp = _expression_replace(exp, res['list'])
+        print(exp)
+
+        if len(re.findall(out['any_priority'], exp)) > 0:
+            res = _list_priority(exp)
+            continue
+
+        elif len(re.findall(out['any_operator'], exp)) > 0:
+            exp = _resolve(exp)
+
+        need_continue = False
+
+    print(exp)
+
+
+
 
 
 
