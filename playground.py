@@ -107,8 +107,8 @@ def _resolve(expression):
 
     # resolve all ^, * and /
     expression = _resolve_last_priority(expression, '^')
-    expression = _resolve_last_priority(expression, '*')
     expression = _resolve_last_priority(expression, '/')
+    expression = _resolve_last_priority(expression, '*')
 
     # resolve all + and -
 
@@ -283,13 +283,18 @@ def _expression_replace(expression, m_list):
 want_continue = True
 while want_continue:
     # exp = "2+(-2 * -2 + 2 - 3 + 3) + [2] + ((!5 /!2) * 3) + (!2)"
-    exp = input("Digite uma expressão matemática:\n")
+    try:
+        exp = input("Digite uma expressão matemática:\n")
+
+    except ValueError:
+        print('Expressão inválida!')
+        continue
 
     exp = _verify_all(exp)
     res = _list_priority(exp)
 
     if res['catch']:
-        print('Expressão inválida -> ' + str(res))
+        print('Expressão inválida!')
         continue
 
     else:
