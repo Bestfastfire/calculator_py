@@ -24,7 +24,7 @@ verify = [
 
 out = {
     'any_priority': r'\(|\[|\{|\)|\}|\]',
-    'any_operator': r'.+[+\-*/^!].+',
+    'any_operator': r'![\d.]|.+[+\-*\/^!].+',
     'operations': r'([^\d.!]+)'
 }
 
@@ -295,9 +295,12 @@ def _expression_replace(expression, m_list):
 
 want_continue = True
 while want_continue:
-    # exp = "2+(-2 * -2 + 2 - 3 + 3) + (2) + ((120 /2) * 3) + (2)"
+    # exp = "2+(-2 * -2 + 2 - 3 + 3) + (2) + ((120 /2) * 3) + (2) = 192"
     try:
-        exp = input("Digite uma expressão matemática:\n")
+        exp = input("Digite uma expressão matemática ou \"f\" para sair:\n")
+
+        if exp == 'f':
+            break
 
     except ValueError:
         print('Expressão inválida!')
@@ -338,7 +341,4 @@ while want_continue:
             need_continue = False
 
         print('O resultado é: ' + str(exp))
-        r = input('Digite "c" para uma nova expressão ou qualquer outro caractere para finalizar:\n')
 
-        if r != 'c':
-            want_continue = False
