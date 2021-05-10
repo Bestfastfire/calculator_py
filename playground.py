@@ -240,6 +240,7 @@ def _list_priority(expression):
                             _res = _list_priority(sub)
 
                             if _res['catch']:
+                                priority_list.append(to_add)
                                 catch = True
                                 break
 
@@ -282,7 +283,7 @@ def _expression_replace(expression, m_list):
 
 want_continue = True
 while want_continue:
-    # exp = "2+(-2 * -2 + 2 - 3 + 3) + [2] + ((!5 /!2) * 3) + (!2)"
+    # exp = "2+(-2 * -2 + 2 - 3 + 3) + (2) + ((120 /2) * 3) + (2)"
     try:
         exp = input("Digite uma expressão matemática:\n")
 
@@ -294,7 +295,7 @@ while want_continue:
     res = _list_priority(exp)
 
     if res['catch']:
-        print('Expressão inválida!')
+        print('Expressão inválida! -> ' + str(res))
         continue
 
     else:
