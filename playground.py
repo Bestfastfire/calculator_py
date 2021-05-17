@@ -4,10 +4,12 @@ verify = [
     {'reg': r'[^\d\{\}\(\)\[\]\+-\/*!\^]+'},
     {'reg': r'[\s]+'},
     {'reg': r'^\+'},
+    #  (+
     {
         'reg': r'([\(\[\{])[\+*\/^]',
         'rep': r'\1'
     },
+    # +)
     {
         'reg': r'[\+*\/^]([\)\]\}])',
         'rep': r'\1'
@@ -89,13 +91,13 @@ def _calc(symbol, v1, v2=0.0):
     return result
 
 
-def clean_list(m_list):
+def _clean_list(m_list):
     return list(filter(None, m_list))
 
 
 def _resolve(expression):
     expression = re.split(out['operations'], expression)
-    expression = clean_list(expression)
+    expression = _clean_list(expression)
     # print('init -> ' + str(expression))
 
     # resolve all !
@@ -160,14 +162,14 @@ def _resolve(expression):
 
             break
 
-        expression = clean_list(expression)
+        expression = _clean_list(expression)
 
     v = float(expression[0])
     return '+' + str(v) if v >= 0 else str(v)
 
 
 def _resolve_last_priority(expression, symbol):
-    expression = clean_list(expression)
+    expression = _clean_list(expression)
     c = True
 
     while c:
@@ -201,14 +203,14 @@ def _resolve_last_priority(expression, symbol):
                     expression[i] = ''
 
                     # [4, '', '', '*', 4]
-                    expression = clean_list(expression)
+                    expression = _clean_list(expression)
                     break
 
         else:
             c = False
 
     # clean empties indexes ['']
-    return clean_list(expression)
+    return _clean_list(expression)
 
 
 def _list_priority(expression):
@@ -295,7 +297,7 @@ def _expression_replace(expression, m_list):
 
 want_continue = True
 while want_continue:
-    # exp = "2+(-2 * -2 + 2 - 3 + 3) + (2) + ((120 /2) * 3) + (2) = 192"
+    # exp = "2+(-2 * -2 + 2 - 3 + 3) + (2) + ((120 /2) * 3) + (2)" = 192
     try:
         exp = input("Digite uma expressão matemática ou \"f\" para sair:\n")
 
@@ -309,12 +311,14 @@ while want_continue:
     exp = _verify_all(exp)
     res = _list_priority(exp)
 
+    # print(json.dumps(res))
+
     if res['catch']:
         print('Expressão inválida! -> ' + str(res))
         continue
 
     else:
-        print('Iniciando cálculos:\n' + exp)
+        # print('Iniciando cálculos:\n' + exp)
         need_continue = True
 
         # 1 + 2 / 4
@@ -328,14 +332,14 @@ while want_continue:
             if len(re.findall(out['any_priority'], exp)) > 0:
                 res = _list_priority(exp)
                 exp = _expression_replace(exp, res['list'])
-                print(exp)
+                # print(exp)
 
                 continue
 
             elif len(re.findall(out['any_operator'], exp)) > 0:
                 exp = _resolve(exp)
                 exp = _verify_all(exp)
-                print(exp)
+                # print(exp)
                 continue
 
             need_continue = False
