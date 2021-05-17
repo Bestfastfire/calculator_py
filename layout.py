@@ -4,8 +4,8 @@ import PySimpleGUI as sg
 import calculator as cl
 
 
-def btn(txt=''):
-    btn = sg.Button(size=(6, 3), button_text=txt)
+def btn(txt='', size=6):
+    btn = sg.Button(size=(size, 3), button_text=txt)
     return btn
 
 
@@ -14,13 +14,13 @@ class LayoutCalculator:
         self.calc = cl.Calculator()
         self.layout = [
             [sg.InputText(size=(36, 5), key='txt')],
-            [sg.Text(key='alert', text='Digite uma equação acima')],
+            [sg.Text(key='alert', text='Digite uma equação acima', size=(32, 0))],
             [btn(txt='('), btn(txt=')'), btn(txt='C'), btn(txt='⌫')],
             [btn(txt='x^y'), btn(txt='x^2'), btn(txt='n!'), btn(txt='/')],
             [btn(txt='7'), btn(txt='8'), btn(txt='9'), btn(txt='*')],
             [btn(txt='4'), btn(txt='5'), btn(txt='6'), btn(txt='-')],
             [btn(txt='1'), btn(txt='2'), btn(txt='3'), btn(txt='+')],
-            [btn(txt='+/-'), btn(txt='0'), btn(txt='.'), btn(txt='=')]
+            [btn(txt='.'), btn(txt='0'), btn(txt='=', size=14)]
         ]
 
         self.window = sg.Window("Calculadora").layout(self.layout)
@@ -62,8 +62,8 @@ class LayoutCalculator:
                 except:
                     calc = 'Expressão inválida!'
 
-                alert.update(calc)
-                txt.update(exp)
+                alert.update(calc[0:32])
+                txt.update(self.calc.verify_all(exp))
 
 
 screen = LayoutCalculator()

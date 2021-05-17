@@ -25,6 +25,10 @@ class Calculator:
             'rep': r'\2'
         },
         {
+            'reg': r'(([\/*\^])[\/*\^]+)',
+            'rep': r'\2'
+        },
+        {
             'reg': r'((!)[!]+)',
             'rep': r'\2'
         }
@@ -79,7 +83,7 @@ class Calculator:
 
         return result
 
-    def _verify_all(self, expression):
+    def verify_all(self, expression):
         for reg in self._verify:
             expression = re.sub(reg['reg'], reg['rep'] if 'rep' in reg else '', expression)
 
@@ -271,17 +275,17 @@ class Calculator:
 
             if 'result' in item:
                 expression = expression.replace(match, item['result'])
-                expression = self._verify_all(expression)
+                expression = self.verify_all(expression)
 
             elif 'inside' in item:
                 expression = expression.replace(match, self._expression_replace(match, item['inside']['list']))
-                expression = self._verify_all(expression)
+                expression = self.verify_all(expression)
 
         return expression
 
     def calc(self, expression):
         try:
-            exp = self._verify_all(expression)
+            exp = self.verify_all(expression)
             res = self._list_priority(exp)
 
         except ValueError:
@@ -299,7 +303,7 @@ class Calculator:
 
             while need_continue:
                 exp = self._expression_replace(exp, res['list'])
-                exp = self._verify_all(exp)
+                exp = self.verify_all(exp)
 
                 if len(re.findall(self._out['any_priority'], exp)) > 0:
                     res = self._list_priority(exp)
@@ -308,7 +312,7 @@ class Calculator:
 
                 elif len(re.findall(self._out['any_operator'], exp)) > 0:
                     exp = self._resolve(exp)
-                    exp = self._verify_all(exp)
+                    exp = self.verify_all(exp)
                     continue
 
                 need_continue = False
